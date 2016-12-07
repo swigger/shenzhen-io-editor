@@ -13,3 +13,4 @@ Install & Build:
     npm install
     gulp build
 
+Then copy contents of build directory to your webserver and enjoy.
