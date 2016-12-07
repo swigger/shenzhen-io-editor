@@ -1,6 +1,8 @@
 import React from 'react';
-import { render } from 'react-dom';
+import ReactDOM from 'react-dom';
+import textpos from './textpos';
 import './css.less';
+
 
 class App extends React.Component{
 	constructor(){
@@ -58,19 +60,23 @@ slp 1`;
 					<button id="load" className="btn btn-primary" onClick={this.doLoad.bind(this)}>load</button>
 					<br/>
 					<pre>{this.state.res||''}</pre>
-					<button id="format" onClick={this.doFmt.bind(this)} className="btn btn-warning">format</button>
 				</div>
 			</div>
 		</div>;
 	}
 	oncc(t)
 	{
-		let r = this.findLines(t.target.value);
-		this.setState({ content: t.target.value, lines:r[0], res:r[2], org_lines:r[3] });
-	}
-	doFmt(){
-		let r = this.findLines(this.state.content);
-		this.setState({content:r[1]});
+		let info = textpos.info(t.target.value, t.target.selectionStart);
+		let keepsp = info.lines == this.state.org_lines;
+		let r = this.findLines(t.target.value, keepsp);
+		let newpos = textpos.apply(r[1], info);
+
+		this.setState({ content: r[1], lines:r[0], res:r[2], org_lines:r[3] });
+
+		let xx = ReactDOM.findDOMNode(t.target);
+		window.setTimeout(()=>{
+			xx.selectionStart = xx.selectionEnd = newpos;
+		}, 20);
 	}
 	doLoad(){
 		if (typeof this.state.activeSL !== "number") return;
@@ -90,51 +96,64 @@ slp 1`;
 		localStorage.setItem(`con${tosl}`, this.state.content);
 		this.setState({});
 	}
-	findLines(v)
+	findLines(v, keep_tail_sp)
 	{
+		let xstrip = (s)=>{
+			if (keep_tail_sp)
+				return s.replace(/^\s+/, '');
+			else
+				return s.replace(/^\s+|\s+$/, '');
+		};
+
+		let lines =  v.split(/\n/);
+		if (lines.length > 0 && lines[lines.length-1] === '')
+			lines.pop();
+
 		let linec = 0;
 		let vv = '';
-		let xx = v.split(/\n/);
 		let vv2 = '';
+		let m;
 
-		for (let l of xx)
+		for (let l of lines)
 		{
-			l = l.replace(/^\s+|\s+$/, '');
-			let m = l.match(/^(\S+:)/);
-			let newl = '';
-			if (m)
-			{
-				newl = m[1];
-				l = l.replace(/^\S+:\s*/, '');
+			let prefix='', body='', tail='';
+			l = xstrip(l);
+			m = l.match(/#.*/);
+			if (m) { tail = m[0]; l = l.substr(0, l.length - tail.length); }
+			m = l.match(/^(\S+:)/);
+			if (m) prefix = m[0];
+			body = l.substr(prefix.length, l.length - prefix.length);
+			body = xstrip(body);
+
+			if (body.length > 0) ++ linec;
+			body = body.replace(/^([+@-])\s*/, '$1 ');
+
+			let newl =  prefix;
+			if (body){
+				if (!prefix && !body.match(/^[+@-]/))
+				{
+					newl += '  ';
+				}
+				else
+					if (newl && !newl.match(/\s$/)) newl += ' ';
+				newl += body;
 			}
-			l = l.replace(/^([+@-])\s*/, '$1 ');
-			if (! l.match(/^#/) && l !== '')
+			if (tail)
 			{
-				++ linec;
+				if (newl && !newl.match(/\s$/)) newl += ' ';
+				newl += tail;
 			}
-			newl += l;
-			newl = this.format(newl);
+
 			vv +=  newl + "\n";
-			newl = newl.replace(/#.*/, '');
-			if (! newl.match(/^\s*$/))
+			newl = newl.replace(/\s*#.*/, '');
+			if (newl)
 			{
-				vv2 += newl.replace(/\s*$/, '');
-				if (!newl.match(/:\s*$/))
-					vv2 += "\n";
+				vv2 += newl + "\n";
 			}
 		}
-
-		vv = vv.substr(0, vv.length-1);
-		vv2 = vv2.replace(/:\s*/g, ': ');
-		return [linec, vv, vv2, xx.length];
-	}
-	format(newl)
-	{
-		newl = newl.replace(/:\s+$/, ':');
-		if (newl.match(/^\s*$|^[+@#-]|:/)) return newl;
-		newl = '  ' + newl;
-		return newl.replace(/\s*#/, ' #');
+		vv2 = vv2.replace(/:\s+/g, ': ');
+		return [linec, vv, vv2, lines.length];
 	}
 }
 
-render(<App />, document.getElementById('container'));
+ReactDOM.render(<App />, document.getElementById('container'));
