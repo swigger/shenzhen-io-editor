@@ -1,7 +1,6 @@
 /**
  * Created by xungeng on 2016/12/7.
  */
-let _ = require('underscore');
 
 function info(text, cpos)
 {
