@@ -44,7 +44,10 @@ function info(text, cpos)
 			break;
 		}
 	}
-
+	if (cpinfo.length == 0)
+	{
+		cpinfo = [r.lines, 0, 0];
+	}
 	r.cpinfo = cpinfo;
 	return r;
 }
@@ -67,6 +70,7 @@ function apply(text, infoobj)
 				nc += 1;
 			}
 		}
+
 		return line.length;
 	};
 

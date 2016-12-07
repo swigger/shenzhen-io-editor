@@ -7,8 +7,15 @@ import './css.less';
 class App extends React.Component{
 	constructor(){
 		super();
-		let qs = `gen p0 2 1
-slp 1`;
+		let qs = ` @mov 50 x1
+  wait:
+  mov x1 acc
+  teq acc -999
++ slp 1
++ jmp wait
+
+  gen p1 x1 0
+  gen p0 x1 0`;
 		let r = this.findLines(qs);
 		this.state = {
 			content: r[1],
@@ -76,7 +83,7 @@ slp 1`;
 		let xx = ReactDOM.findDOMNode(t.target);
 		window.setTimeout(()=>{
 			xx.selectionStart = xx.selectionEnd = newpos;
-		}, 20);
+		}, 1);
 	}
 	doLoad(){
 		if (typeof this.state.activeSL !== "number") return;
